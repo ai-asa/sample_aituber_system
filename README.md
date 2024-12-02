@@ -1,5 +1,9 @@
 # AI VTuber System
 
+https://github.com/user-attachments/assets/f68dbf09-d02e-438d-9d2a-1e10e4d0daa0
+
+![character setting page](https://github.com/user-attachments/assets/23083153-fdbc-4521-9140-a2649bd954b1)
+
 AITuberのキャラクター編集、作成、配信システムを統合したシステム及びFletを使用したUIアプリケーション。VTubeStudioと連携してLive2Dアバターのアニメーションを制御します。
 
 ## 主な機能
