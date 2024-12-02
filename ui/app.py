@@ -1,23 +1,27 @@
 import os
+import sys
 import csv
 import uuid
 import time
+import shutil
 import configparser
 import flet as ft
 import logging
 import sounddevice as sd
 import multiprocessing
+from ui.utils.character_manager import CharacterManager
+from ai_vtuber_system import subprocess_playsound,subprocess_streaming,subprocess_subtitle_emotion,subprocess_main_loop
+from src.onecomme.onecomme_adapter import subprocess_onecomme
+from src.vtubestudio.vtubestudio_adapter import VtubeStudioAdapter
+from src.prompt.get_prompt import GetPrompt
+
+logging.basicConfig(level=logging.DEBUG)
 
 class AIVtuberApp:
-
     def __init__(self, page: ft.Page):
-        from ui.utils.character_manager import CharacterManager
-        from src.prompt.get_prompt import GetPrompt
-        self.base_dir = self.get_base_documents_dir()
-        # log_path = os.path.join(self.base_dir, 'app.log')
         self.config = configparser.ConfigParser()
-        self.cm = CharacterManager(self.base_dir)
-        self.gp = GetPrompt(self.base_dir)
+        self.cm = CharacterManager()
+        self.gp = GetPrompt()
         self.page = page
         self.page.title = "AI VTuber System"
         self.page.window_width = 1000
@@ -51,41 +55,41 @@ class AIVtuberApp:
         self.default_situation_prompt = self.gp.default_situation_prompt()
         self.default_format_prompt = self.gp.default_format_prompt()
         self.default_guideline_prompt = self.gp.default_guideline_prompt()
-        self.default_voice_prompt = self.gp.default_voice_prompt()
         self.default_exampleTopic_prompt = self.gp.default_exampleTopic_prompt()
         self.default_thinkTopic_prompt = self.gp.default_thinkTopic_prompt()
 
         # NGワードCSVファイルの自動読み込み
-        ini_prohibited_path = os.path.join(self.base_dir, 'ng', '禁止ワード', '禁止ワード.csv')
-        ini_ng_path = os.path.join(self.base_dir, 'ng', 'NG変換ワード', 'NG変換ワード.csv')
-
-        ngword_file_path = self.config.get('NGWORD', 'NGWORD_FILE_PATH', fallback=ini_ng_path)
-        if not ngword_file_path:
-            ngword_file_path = ini_ng_path
-        if os.path.exists(ngword_file_path):
-            self.ng_words_file_path.value = f"使用するCSVファイル: {ngword_file_path}"
-            self.load_ng_words_from_csv(ngword_file_path)
+        ngword_file_path = self.config.get('NGWORD', 'NGWORD_FILE_PATH', fallback='')
+        if ngword_file_path:
+            if os.path.exists(ngword_file_path):
+                self.ng_words_file_path.value = f"使用するCSVファイル: {ngword_file_path}"
+                self.load_ng_words_from_csv(ngword_file_path)
+            else:
+                # ファイルが存在しない場合のメッセージ表示
+                self.ng_words_file_path.value = "ファイルが移動されたか削除されました。"
+                self.ng_words_file_path.update()
+                # テーブルをクリアし、空の行を追加
+                self.ng_words_table.rows.clear()
+                self.add_ng_word_row()
         else:
-            # ファイルが存在しない場合のメッセージ表示
-            self.ng_words_file_path.value = "ファイルが移動されたか削除されました。"
-            self.ng_words_file_path.update()
-            # テーブルをクリアし、空の行を追加
-            self.ng_words_table.rows.clear()
+            # ファイルが指定されていない場合でも空の行を1つ追加
             self.add_ng_word_row()
 
         # 禁止語彙CSVファイルの自動読み込み
-        prohibited_file_path = self.config.get('NGWORD', 'PROHIBITED_FILE_PATH', fallback=ini_prohibited_path)
-        if not prohibited_file_path:
-            prohibited_file_path = ini_prohibited_path
-        if os.path.exists(prohibited_file_path):
-            self.prohibited_words_file_path.value = f"使用するCSVファイル: {prohibited_file_path}"
-            self.load_prohibited_words_from_csv(prohibited_file_path)
+        prohibited_file_path = self.config.get('NGWORD', 'PROHIBITED_FILE_PATH', fallback='')
+        if prohibited_file_path:
+            if os.path.exists(prohibited_file_path):
+                self.prohibited_words_file_path.value = f"使用するCSVファイル: {prohibited_file_path}"
+                self.load_prohibited_words_from_csv(prohibited_file_path)
+            else:
+                # ファイルが存在しない場合のメッセージ表示
+                self.prohibited_words_file_path.value = "ファイルが移動されたか削除されました。"
+                self.prohibited_words_file_path.update()
+                # テーブルをクリアし、空の行を追加
+                self.prohibited_words_table.rows.clear()
+                self.add_prohibited_word_row()
         else:
-            # ファイルが存在しない場合のメッセージ表示
-            self.prohibited_words_file_path.value = "ファイルが移動されたか削除されました。"
-            self.prohibited_words_file_path.update()
-            # テーブルをクリアし、空の行を追加
-            self.prohibited_words_table.rows.clear()
+            # ファイルが指定されていない場合でも空の行を1つ追加
             self.add_prohibited_word_row()
 
         # Update view
@@ -119,16 +123,10 @@ class AIVtuberApp:
         self.gen_ai_service = ["OpenAI API", "Gemini API"]
         self.openai_default_models = ["gpt-4o", "gpt-4o-mini"]
         self.gemini_default_models = ["gemini-1.5-flash", "gemini-1.5-pro"]
-        self.ng_words_file_path = ft.Text()
-        self.prohibited_words_file_path = ft.Text()
 
     def get_documents_dir(self):
         # Windows のドキュメントフォルダを取得
         return os.path.join(os.environ['USERPROFILE'], 'Documents')
-    
-    def get_base_documents_dir(self):
-        # ドキュメント内の AIVTuberSystem フォルダを取得
-        return os.path.join(self.get_documents_dir(), 'AIVTuberSystem')
 
     def create_bottom_sheet(self):
         return ft.BottomSheet(
@@ -272,7 +270,7 @@ class AIVtuberApp:
         self.OPENAI_API_KEY.current = ft.TextField(
             label="OpenAI API キー",
             hint_text="OpenAI APIキーを入力してください",
-            value=self.config.get('ENVIRONMENT', 'OPENAI_API_KEY', fallback=''),
+            value=self.config.get('Environment', 'OPENAI_API_KEY', fallback=''),
             password=True,
             can_reveal_password=True,
             bgcolor=ft.colors.WHITE
@@ -280,7 +278,7 @@ class AIVtuberApp:
         self.GEMINI_API_KEY.current = ft.TextField(
             label="GeminiAPI キー",
             hint_text="Gemini APIキーを入力してください",
-            value=self.config.get('ENVIRONMENT', 'GEMINI_API_KEY', fallback=''),
+            value=self.config.get('Environment', 'GEMINI_API_KEY', fallback=''),
             password=True,
             can_reveal_password=True,
             bgcolor=ft.colors.WHITE
@@ -387,12 +385,10 @@ class AIVtuberApp:
                     self.OBS_SUBTITLE_NAME.current,
                     self.OBS_SUBTITLE_AI.current,
                     self.OBS_SUBTITLE_LIMITE.current,
-                    ft.Divider(thickness=1),
                     ft.Text("わんコメの設定", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
                     self.ONECOMME_WS_HOST.current,
                     self.ONECOMME_WS_PORT.current,
                     self.ONECOMME_ID.current,
-                    ft.Divider(thickness=1),
                     ft.Text("VTSの設定", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
                     self.VTS_WS_HOST.current,
                     self.VTS_WS_PORT.current
@@ -496,11 +492,9 @@ class AIVtuberApp:
                     sound_settings_text,
                     self.VIRTUAL_AUDIO_CABLE.current,
                     refresh_button,
-                    ft.Divider(thickness=1),
                     ft.Text("会話履歴設定", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
                     memory_settings_text,
                     self.HISTORY_LIMITE.current,
-                    ft.Divider(thickness=1),
                     ft.Text("生成AI設定", style=ft.TextThemeStyle.HEADLINE_MEDIUM),
                     AIcall_settings_text,
                     self.CALL_LIMITE.current,
@@ -580,6 +574,7 @@ class AIVtuberApp:
             weight=ft.FontWeight.BOLD,
         )
 
+        self.ng_words_file_path = ft.Text("使用するCSVファイル: " + self.config.get('NGWORD', 'NG_FILE_PATH', fallback='なし'))
         select_ngword_file_button = ft.ElevatedButton("使用するCSVファイルを選択", on_click=self.select_ng_words_file)
 
         self.ng_words_table = ft.DataTable(
@@ -626,6 +621,7 @@ class AIVtuberApp:
             weight=ft.FontWeight.BOLD,
         )
 
+        self.prohibited_words_file_path = ft.Text("使用するCSVファイル: " + self.config.get('NGWORD', 'PROHIBITED_FILE_PATH', fallback='なし'))
         select_prohibited_file_button = ft.ElevatedButton("使用するCSVファイルを選択", on_click=self.select_prohibited_words_file)
 
         self.prohibited_words_table = ft.DataTable(
@@ -701,7 +697,7 @@ class AIVtuberApp:
             ),
             padding=ft.padding.only(left=20, right=20, top=20, bottom=0),
         )
-    
+
     def create_stream_tab(self):
         # 配信するキャラクターのプルダウン
         self.stream_character_dropdown.current = ft.Dropdown(
@@ -817,11 +813,6 @@ class AIVtuberApp:
         self.selected_character_name.current.update()
 
     def start_stream(self, e=None):
-        from sub.subprocess_main_loop import subprocess_main_loop
-        from sub.subprocess_playsound import subprocess_playsound
-        from sub.subprocess_streaming import subprocess_streaming
-        from sub.subprocess_subtitle_emotion import subprocess_subtitle_emotion
-        from sub.subprocess_onecomme import subprocess_onecomme
         self.start_stream_button.disabled = True
         self.stop_stream_button.disabled = False
         self.page.update()
@@ -838,12 +829,11 @@ class AIVtuberApp:
         self.queue_flag = multiprocessing.Queue()
         self.vts_allow_flag = multiprocessing.Queue()
         self.exit_event = multiprocessing.Event()
-        base_dir = self.get_base_documents_dir()
-        self.p_1 = multiprocessing.Process(target=subprocess_onecomme,args=(base_dir,self.queue_onecomme,))
-        self.p_2 = multiprocessing.Process(target=subprocess_streaming,args=(base_dir,self.queue_streaming,self.queue_playsound,self.exit_event,selected_name))
+        self.p_1 = multiprocessing.Process(target=subprocess_onecomme,args=(self.queue_onecomme,))
+        self.p_2 = multiprocessing.Process(target=subprocess_streaming,args=(self.queue_streaming,self.queue_playsound,self.exit_event,selected_name))
         self.p_3 = multiprocessing.Process(target=subprocess_playsound,args=(self.queue_playsound,self.queue_subtitle_emotion,self.queue_flag,self.exit_event))
-        self.p_4 = multiprocessing.Process(target=subprocess_subtitle_emotion,args=(base_dir,self.queue_subtitle_emotion,self.vts_allow_flag,self.exit_event,selected_name))
-        self.p_5 = multiprocessing.Process(target=subprocess_main_loop,args=(base_dir,self.queue_flag,self.queue_onecomme,self.queue_streaming,self.exit_event,selected_name,self.GEN_AI_SERVICE.current.value,self.GEN_AI_MODEL.current.value))
+        self.p_4 = multiprocessing.Process(target=subprocess_subtitle_emotion,args=(self.queue_subtitle_emotion,self.vts_allow_flag,self.exit_event,selected_name))
+        self.p_5 = multiprocessing.Process(target=subprocess_main_loop,args=(self.queue_flag,self.queue_onecomme,self.queue_streaming,self.exit_event,selected_name,self.GEN_AI_SERVICE.current.value,self.GEN_AI_MODEL.current.value))
         # 配信開始ロジック
         self.p_1.start()
         self.p_2.start()
@@ -1367,12 +1357,11 @@ class AIVtuberApp:
         self.VIRTUAL_AUDIO_CABLE.current.update()
 
     def load_settings(self):
-        settings_path = os.path.join(self.base_dir, 'settings', 'settings.ini')
-        if os.path.exists(settings_path):
-            self.config.read(settings_path, encoding='utf-8')
+        if os.path.exists("settings.ini"):
+            self.config.read("settings.ini", encoding='utf-8')
 
         # Ensure all necessary sections exist
-        for section in ['ENVIRONMENT', 'OBS', 'ONECOMME', 'VTS', 'SYSTEM', 'NGWORD']:
+        for section in ['Environment', 'OBS', 'ONECOMME', 'VTS', 'SYSTEM', 'NGWORD']:
             if not self.config.has_section(section):
                 self.config.add_section(section)
 
@@ -1392,8 +1381,8 @@ class AIVtuberApp:
 
     def save_all_settings(self, e=None):
         # Save API keys
-        self.config.set('ENVIRONMENT', 'OPENAI_API_KEY', self.OPENAI_API_KEY.current.value)
-        self.config.set('ENVIRONMENT', 'GEMINI_API_KEY', self.GEMINI_API_KEY.current.value)
+        self.config.set('Environment', 'OPENAI_API_KEY', self.OPENAI_API_KEY.current.value)
+        self.config.set('Environment', 'GEMINI_API_KEY', self.GEMINI_API_KEY.current.value)
         # Save OBS settings
         self.config.set('OBS', 'OBS_WS_HOST', self.OBS_WS_HOST.current.value)
         self.config.set('OBS', 'OBS_WS_PORT', self.OBS_WS_PORT.current.value)
@@ -1474,8 +1463,8 @@ class AIVtuberApp:
 
     def reset_all_settings(self, e=None):
         # Reset API keys
-        self.OPENAI_API_KEY.current.value = self.config.get('ENVIRONMENT', 'OPENAI_API_KEY', fallback='')
-        self.GEMINI_API_KEY.current.value = self.config.get('ENVIRONMENT', 'GEMINI_API_KEY', fallback='')
+        self.OPENAI_API_KEY.current.value = self.config.get('Environment', 'OPENAI_API_KEY', fallback='')
+        self.GEMINI_API_KEY.current.value = self.config.get('Environment', 'GEMINI_API_KEY', fallback='')
         self.OPENAI_API_KEY.current.update()
         self.GEMINI_API_KEY.current.update()
         # Reset OBS settings
@@ -1583,8 +1572,7 @@ class AIVtuberApp:
         self.page.update()
 
     def save_settings(self):
-        settings_path = os.path.join(self.base_dir, 'settings', 'settings.ini')
-        with open(settings_path, "w", encoding='utf-8') as f:
+        with open("settings.ini", "w", encoding='utf-8') as f:
             self.config.write(f)
 
     def load_characters(self):
@@ -1842,55 +1830,31 @@ class AIVtuberApp:
         profile_prompt_input = ft.Ref[ft.TextField]()
         situation_prompt_input = ft.Ref[ft.TextField]()
         guideline_prompt_input = ft.Ref[ft.TextField]()
-        voice_prompt_input = ft.Ref[ft.TextField]()
         format_prompt_input = ft.Ref[ft.TextField]()
         exampleTopic_prompt_input = ft.Ref[ft.TextField]()
         thinkTopic_prompt_input = ft.Ref[ft.TextField]()
         voice_service_dropdown = ft.Ref[ft.Dropdown]()
         voice_dropdown = ft.Ref[ft.Dropdown]()
-        change_tone_checkbox = ft.Ref[ft.Checkbox]()
         wait_time = ft.Ref[ft.TextField]()
+        pose_input = ft.Ref[ft.TextField]()
         happy_input = ft.Ref[ft.TextField]()
         sad_input = ft.Ref[ft.TextField]()
-        fun_input = ft.Ref[ft.TextField]()
+        surprise_input = ft.Ref[ft.TextField]()
         angry_input = ft.Ref[ft.TextField]()
+        blue_input = ft.Ref[ft.TextField]()
         neutral_input = ft.Ref[ft.TextField]()
         hotkeys_table_container = ft.Column()
-        vv_status = ft.Ref[ft.Text]()
         vts_status = ft.Ref[ft.Text]()
         file_picker = ft.FilePicker(on_result=lambda e: self.update_image(e, image_ref))
         self.page.overlay.append(file_picker)
 
-        def get_voicevoxIds(e):
-            from src.voice.voicevox_adapter import VoicevoxAdapter
-            try:
-                va = VoicevoxAdapter()
-                voice_list, _ = va.fetch_voice_id()
-                dropdown_options = [ft.dropdown.Option(voice_name) for voice_name in voice_list]
-                voice_dropdown.current.options = dropdown_options
-
-                # 保存されたボイスキャラクターがあれば選択状態にする
-                saved_voice = voice_dropdown.current.value
-                if saved_voice in voice_list:
-                    voice_dropdown.current.value = saved_voice
-                else:
-                    voice_dropdown.current.value = voice_list[0] if voice_list else None
-
-                voice_dropdown.current.update()
-            except Exception as ex:
-                # エラー処理
-                vv_status.current.value = f"エラーが発生しました: {str(ex)}"
-                vv_status.current.color = ft.colors.RED
-                vv_status.current.update()
-
         def get_hotkeyIds(e):
-            from src.vtubestudio.vtubestudio_adapter import VtubeStudioAdapter
             try:
                 vts_status.current.value = "ホットキーIDを取得します。VTSにて'AIVsystem_Plugin'を許可してください。"
                 vts_status.current.color = ft.colors.RED
                 vts_status.current.update()
                 vts_allow_flag = multiprocessing.Queue()
-                vs = VtubeStudioAdapter(self.base_dir,vts_allow_flag)
+                vs = VtubeStudioAdapter(vts_allow_flag)
                 allow_flag = vts_allow_flag.get()
                 if allow_flag == 1:
                     vts_status.current.value = "VTSプラグインが拒否されました。"
@@ -1970,18 +1934,18 @@ class AIVtuberApp:
             profile_prompt = profile_prompt_input.current.value
             situation_prompt = situation_prompt_input.current.value
             guideline_prompt = guideline_prompt_input.current.value
-            voice_prompt = voice_prompt_input.current.value
             format_prompt = format_prompt_input.current.value
             exampleTopic_prompt = exampleTopic_prompt_input.current.value
             thinkTopic_prompt = thinkTopic_prompt_input.current.value
             voice_service = voice_service_dropdown.current.value
             voice = voice_dropdown.current.value
-            change_tone = change_tone_checkbox.current.value
             wait = wait_time.current.value
+            pose = pose_input.current.value.strip()
             happy = happy_input.current.value.strip()
             sad = sad_input.current.value.strip()
-            fun = fun_input.current.value.strip()
+            surprise = surprise_input.current.value.strip()
             angry = angry_input.current.value.strip()
+            blue = blue_input.current.value.strip()
             neutral = neutral_input.current.value.strip()
 
             # 他のキャラクターの表示名とかぶらないかチェック
@@ -2004,18 +1968,18 @@ class AIVtuberApp:
                 "profile_prompt": profile_prompt,
                 "situation_prompt": situation_prompt,
                 "guideline_prompt": guideline_prompt,
-                "voice_prompt" : voice_prompt,
                 "format_prompt" : format_prompt,
                 "exampleTopic_prompt" : exampleTopic_prompt,
                 "thinkTopic_prompt" : thinkTopic_prompt,
                 "voice_service": voice_service,
                 "voice": voice,
-                "change_tone": change_tone,
                 "wait": wait,
+                "pose": pose,
                 "happy": happy,
                 "sad": sad,
-                "fun": fun,
+                "surprise": surprise,
                 "angry": angry,
+                "blue": blue,
                 "neutral": neutral,
             }
             if is_new:
@@ -2059,11 +2023,6 @@ class AIVtuberApp:
             size=16,
             weight=ft.FontWeight.BOLD,
         )
-        voice_prompt_text = ft.Text(
-            "キャラクターの発言時の声のトーンの選択肢、指定形式を設定するフィールドです。",
-            size=16,
-            weight=ft.FontWeight.BOLD,
-        )
         format_prompt_text = ft.Text(
             "キャラクターのコメントへの応答形式の制約を設定するフィールドです。",
             size=16,
@@ -2098,7 +2057,6 @@ class AIVtuberApp:
                 ft.TextField(ref=family_name_kana_input, label="せい（かな）", value=character.get("family_name_kana", self.cm.DEFAULT_FAMILY_KANA_NAME) if character else self.cm.DEFAULT_FAMILY_KANA_NAME, expand=1, bgcolor=ft.colors.WHITE),
                 ft.TextField(ref=last_name_kana_input, label="めい（かな）", value=character.get("last_name_kana", self.cm.DEFAULT_LAST_KANA_NAME) if character else self.cm.DEFAULT_LAST_KANA_NAME, expand=1, bgcolor=ft.colors.WHITE),
             ]),
-            ft.Divider(thickness=1),
             ft.Text("ボイス設定", style=ft.TextThemeStyle.HEADLINE_SMALL, weight=ft.FontWeight.BOLD),
             ft.Dropdown(
                 ref=voice_service_dropdown,
@@ -2111,34 +2069,63 @@ class AIVtuberApp:
             ),
             ft.Dropdown(
                 ref=voice_dropdown,
-                label="ボイスキャラクター",
+                label="ボイス",
                 bgcolor=ft.colors.WHITE,
+                options=[
+                    ft.dropdown.Option("四国めたん(ノーマル)"),
+                    ft.dropdown.Option("四国めたん(あまあま)"),
+                    ft.dropdown.Option("四国めたん(ツンツン)"),
+                    ft.dropdown.Option("四国めたん(セクシー)"),
+                    ft.dropdown.Option("四国めたん(ささやき)"),
+                    ft.dropdown.Option("四国めたん(ヒソヒソ)"),
+                    ft.dropdown.Option("ずんだもん(ノーマル)"),
+                    ft.dropdown.Option("ずんだもん(ツンツン)"),
+                    ft.dropdown.Option("ずんだもん(セクシー)"),
+                    ft.dropdown.Option("ずんだもん(ささやき)"),
+                    ft.dropdown.Option("ずんだもん(ヒソヒソ)"),
+                    ft.dropdown.Option("春日部つむぎ(ノーマル)"),
+                    ft.dropdown.Option("雨晴はう(ノーマル)"),
+                    ft.dropdown.Option("玄野武宏(ノーマル)"),
+                    ft.dropdown.Option("玄野武宏(喜び)"),
+                    ft.dropdown.Option("玄野武宏(ツンギレ)"),
+                    ft.dropdown.Option("玄野武宏(悲しみ)"),
+                    ft.dropdown.Option("白上虎太郎(ふつう)"),
+                    ft.dropdown.Option("白上虎太郎(わーい)"),
+                    ft.dropdown.Option("白上虎太郎(びくびく)"),
+                    ft.dropdown.Option("白上虎太郎(おこ)"),
+                    ft.dropdown.Option("白上虎太郎(びえーん)"),
+                    ft.dropdown.Option("青山龍星(ノーマル)"),
+                    ft.dropdown.Option("冥鳴ひまり(ノーマル)"),
+                    ft.dropdown.Option("九州そら(ノーマル)"),
+                    ft.dropdown.Option("九州そら(あまあま)"),
+                    ft.dropdown.Option("九州そら(ツンツン)"),
+                    ft.dropdown.Option("九州そら(セクシー)"),
+                    ft.dropdown.Option("九州そら(ささやき)"),
+                    ft.dropdown.Option("もち子さん(ノーマル)"),
+                    ft.dropdown.Option("剣崎雌雄(ノーマル)"),
+                    ft.dropdown.Option("WhiteCUL(ノーマル)"),
+                    ft.dropdown.Option("WhiteCUL(たのしい)"),
+                    ft.dropdown.Option("WhiteCUL(かなしい)"),
+                    ft.dropdown.Option("WhiteCUL(びえーん)"),
+                    ft.dropdown.Option("後鬼(人間ver.)"),
+                    ft.dropdown.Option("後鬼(ぬいぐるみver.)"),
+                    ft.dropdown.Option("No.7(ノーマル)"),
+                    ft.dropdown.Option("No.7(アナウンス)"),
+                    ft.dropdown.Option("No.7(読み聞かせ)"),
+                    ft.dropdown.Option("ちび式じい(ノーマル)"),
+                    ft.dropdown.Option("櫻歌ミコ(ノーマル)"),
+                    ft.dropdown.Option("櫻歌ミコ(第二形態)"),
+                    ft.dropdown.Option("櫻歌ミコ(ロリ)"),
+                    ft.dropdown.Option("小夜/SAYO(ノーマル)"),
+                    ft.dropdown.Option("ナースロボ＿タイプT(ノーマル)"),
+                    ft.dropdown.Option("ナースロボ＿タイプT(楽々)"),
+                    ft.dropdown.Option("ナースロボ＿タイプT(恐怖)"),
+                    ft.dropdown.Option("ナースロボ＿タイプT(内緒話)")
+                ],
                 value=character.get("voice", "ずんだもん(ノーマル)") if character else "ずんだもん(ノーマル)",
             ),
-            ft.ElevatedButton("ボイスキャラクターを取得", on_click=get_voicevoxIds),
-            ft.Text(
-                ref=vv_status,
-                value="利用可能なボイスキャラクターを取得します。\n「外部ソフト」設定を完了し、VOICEVOXを起動した状態でボタンを押下してください。",
-                color=ft.colors.BLACK
-            ),
-            ft.Row(
-                [
-                    ft.Checkbox(
-                        ref=change_tone_checkbox,
-                        label="発言内容に合わせて声のトーンを変える",
-                        value=character.get("change_tone", False) if character else False,
-                    )
-                ],
-            ),
-            ft.Text(
-                ref=vv_status,
-                value="以下のキャラクターを選択した場合のみ可能です。\n・四国めたん(ノーマル)\n・ずんだもん(ノーマル)\n・玄野武宏(ノーマル)\n・白上虎太郎(ふつう)\n・青山龍星(ノーマル)\n・九州そら(ノーマル)\n・もち子さん(ノーマル)\n・WhiteCUL(ノーマル)\n※本機能を使用する場合は、使用ボイスに合わせてプロンプト設定の声のトーンの種類を変更してください。",
-                color=ft.colors.BLACK
-            ),
-            ft.Divider(thickness=1),
             ft.Text("自動発話設定", style=ft.TextThemeStyle.HEADLINE_SMALL, weight=ft.FontWeight.BOLD),
             ft.TextField(ref=wait_time, label="自動発話までのコメント待機時間(秒:半角数字で入力)", value=character["wait"] if character else "", bgcolor=ft.colors.WHITE),
-            ft.Divider(thickness=1),
             ft.Text("ホットキー設定(VTS)", style=ft.TextThemeStyle.HEADLINE_SMALL, weight=ft.FontWeight.BOLD),
             hotkey_explain_text,
             ft.ElevatedButton("ホットキーを取得", on_click=get_hotkeyIds),
@@ -2148,12 +2135,13 @@ class AIVtuberApp:
                 color=ft.colors.BLACK
             ),
             hotkeys_table_container,
+            ft.TextField(ref=pose_input, label="Pose ホットキーID", value=character.get("pose", "") if character else "", bgcolor=ft.colors.WHITE),
             ft.TextField(ref=happy_input, label="Happy ホットキーID", value=character.get("happy", "") if character else "", bgcolor=ft.colors.WHITE),
             ft.TextField(ref=sad_input, label="Sad ホットキーID", value=character.get("sad", "") if character else "", bgcolor=ft.colors.WHITE),
-            ft.TextField(ref=fun_input, label="Fun ホットキーID", value=character.get("fun", "") if character else "", bgcolor=ft.colors.WHITE),
+            ft.TextField(ref=surprise_input, label="Surprise ホットキーID", value=character.get("surprise", "") if character else "", bgcolor=ft.colors.WHITE),
             ft.TextField(ref=angry_input, label="Angry ホットキーID", value=character.get("angry", "") if character else "", bgcolor=ft.colors.WHITE),
+            ft.TextField(ref=blue_input, label="Blue ホットキーID", value=character.get("blue", "") if character else "", bgcolor=ft.colors.WHITE),
             ft.TextField(ref=neutral_input, label="Neutral ホットキーID", value=character.get("neutral", "") if character else "", bgcolor=ft.colors.WHITE),
-            ft.Divider(thickness=1),
             ft.Text("プロンプト設定", style=ft.TextThemeStyle.HEADLINE_SMALL, weight=ft.FontWeight.BOLD),
             profile_prompt_text,
             ft.TextField(ref=profile_prompt_input, label="キャラクターのプロフィールを入力してください", value=character.get("profile_prompt", self.default_profile_prompt) if character else self.default_profile_prompt, multiline=True, min_lines=3, max_lines=5, bgcolor=ft.colors.WHITE),
@@ -2161,8 +2149,6 @@ class AIVtuberApp:
             ft.TextField(ref=situation_prompt_input, label="キャラクターの配信シチュエーションを入力してください", value=character.get("situation_prompt", self.default_situation_prompt) if character else self.default_situation_prompt, multiline=True, min_lines=3, max_lines=5, bgcolor=ft.colors.WHITE),
             guideline_prompt_text,
             ft.TextField(ref=guideline_prompt_input, label="キャラクターの応答のガイドラインを入力してください", value=character.get("guideline_prompt", self.default_guideline_prompt) if character else self.default_guideline_prompt, multiline=True, min_lines=3, max_lines=5, bgcolor=ft.colors.WHITE),
-            voice_prompt_text,
-            ft.TextField(ref=voice_prompt_input, label="声のトーンの指定形式を入力してください", value=character.get("voice_prompt", self.default_voice_prompt) if character else self.default_voice_prompt, multiline=True, min_lines=3, max_lines=5, bgcolor=ft.colors.WHITE),
             format_prompt_text,
             ft.TextField(ref=format_prompt_input, label="キャラクターの応答形式の制約を入力してください", value=character.get("format_prompt", self.default_format_prompt) if character else self.default_format_prompt, multiline=True, min_lines=3, max_lines=5, bgcolor=ft.colors.WHITE),
             exampleTopic_prompt_text,

@@ -1,0 +1,32 @@
+2024-09-23 15:31:44,565 - INFO - Connecting with parameters: host='127.0.0.1' port=4455 password='4nj4jY0fPnwfTERc' subs=0 timeout=None
+2024-09-23 15:31:44,568 - INFO - Successfully identified ReqClient with the server using RPC version:1
+2024-09-23 15:32:08,162 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 15:32:08,744 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 15:33:26,009 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 15:33:26,524 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 15:34:34,860 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 15:34:35,394 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 19:36:14,421 - INFO - Connecting with parameters: host='127.0.0.1' port=4455 password='4nj4jY0fPnwfTERc' subs=0 timeout=None
+2024-09-23 19:36:14,424 - INFO - Successfully identified ReqClient with the server using RPC version:1
+2024-09-23 19:36:39,328 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 19:36:39,810 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 19:38:01,895 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 19:38:02,427 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 19:38:43,236 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 19:38:43,702 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 19:39:48,177 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 19:39:48,643 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 21:06:41,835 - INFO - Connecting with parameters: host='127.0.0.1' port=4455 password='4nj4jY0fPnwfTERc' subs=0 timeout=None
+2024-09-23 21:06:41,839 - INFO - Successfully identified ReqClient with the server using RPC version:1
+2024-09-23 21:33:15,314 - INFO - Connecting with parameters: host='127.0.0.1' port=4455 password='4nj4jY0fPnwfTERc' subs=0 timeout=None
+2024-09-23 21:33:15,317 - INFO - Successfully identified ReqClient with the server using RPC version:1
+2024-09-23 21:33:38,743 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 21:33:39,242 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 21:34:32,989 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 21:34:33,490 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 21:46:24,938 - INFO - Connecting with parameters: host='127.0.0.1' port=4455 password='4nj4jY0fPnwfTERc' subs=0 timeout=None
+2024-09-23 21:46:24,940 - INFO - Successfully identified ReqClient with the server using RPC version:1
+2024-09-23 21:46:51,513 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 21:46:52,197 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 21:47:43,259 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-09-23 21:47:43,733 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"

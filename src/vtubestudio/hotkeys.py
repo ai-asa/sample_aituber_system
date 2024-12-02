@@ -1,16 +1,13 @@
 import configparser
-import os
-
 """
 デフォルトで、笑い、悲しい、泣き、ショック、怒り、無表情の6つの表情に対応しています。
 使用するモデルごとに、対応するキーバインドアクションのID(hotkey ID)を調べ、書き換えてください。
 """
 # "Expressions" = "Hotkey ID"
 class GetHotkeyId:
-    def __init__(self,base_dir,selected_character_name):
+    def __init__(self,selected_character_name):
         config = configparser.ConfigParser()
-        characters_path = os.path.join(base_dir, 'characters', 'characters.ini')
-        config.read(characters_path, encoding='utf-8')
+        config.read("characters.ini", encoding='utf-8')
         characters = []
         for section in config.sections():
             characters.append({

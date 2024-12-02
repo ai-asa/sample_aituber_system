@@ -35,15 +35,15 @@ class OnecommePost:
         self.comment_id += 1
         return response
     
-# if __name__ == "__main__":
-#     op = OnecommePost()
-#     text_list = ["よし","これで","どうかな？"]
-#     channel_id = "fcc0dd03-3e42-40c0-9dd7-ea112c33a1ba"
-#     name = "Chat_AI"
-#     import time
-#     for text in text_list:
-#         response = op.post_comment(text,channel_id,name)
-#         print(response.text)
-#         time.sleep(5)
+if __name__ == "__main__":
+    op = OnecommePost()
+    text_list = ["よし","これで","どうかな？"]
+    channel_id = "fcc0dd03-3e42-40c0-9dd7-ea112c33a1ba"
+    name = "Chat_AI"
+    import time
+    for text in text_list:
+        response = op.post_comment(text,channel_id,name)
+        print(response.text)
+        time.sleep(5)
     
 # %%

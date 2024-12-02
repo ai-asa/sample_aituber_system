@@ -1,64 +1,60 @@
 import flet as ft
-import os
 import sys
+import os
 import shutil
-import multiprocessing
-
-def get_documents_dir():
-    # Windows のドキュメントフォルダを取得
-    return os.path.join(os.environ['USERPROFILE'], 'Documents')
-
-def get_base_documents_dir():
-    # ドキュメント内の AIVTuberSystem フォルダを取得
-    return os.path.join(get_documents_dir(), 'AIVTuberSystem')
-
-def resource_path(relative_path):
-    if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
-
-def copy_file_to_documents(source_relative_path, dest_relative_path):
-    # source_relative_path: アプリケーションディレクトリからの相対パス
-    # dest_relative_path: AIVTuberSystem ディレクトリからの相対パス
-
-    # resource_pathを使用して、正しいパスを取得
-    source_path = resource_path(source_relative_path)
-    dest_path = os.path.join(get_base_documents_dir(), dest_relative_path)
-
-    # ディレクトリが存在しない場合は作成
-    dest_dir = os.path.dirname(dest_path)
-    if not os.path.exists(dest_dir):
-        os.makedirs(dest_dir)
-
-    # 既に存在する場合はコピーしない
-    if not os.path.exists(dest_path):
-        try:
-            shutil.copyfile(source_path, dest_path)
-            print(f"Copied {source_path} to {dest_path}")
-        except Exception as e:
-            print(f"Error copying {source_path} to {dest_path}: {e}")
-    else:
-        print(f"{dest_path} already exists, not overwriting.")
+from ui.app import AIVtuberApp
 
 def main(page: ft.Page):
-    from ui.app import AIVtuberApp
 
-    # 起動時に AIVTuberSystem フォルダを作成
-    base_documents_dir = get_base_documents_dir()
-    if not os.path.exists(base_documents_dir):
-        os.makedirs(base_documents_dir)
-        print(f"Created directory: {base_documents_dir}")
+    def get_documents_dir():
+        # Windows のドキュメントフォルダを取得
+        return os.path.join(os.environ['USERPROFILE'], 'Documents')
 
-    # 起動時にファイルをコピー
-    copy_file_to_documents("images//default_character.png","images//default_character.png")
-    copy_file_to_documents("images//史風 鈴(pose).png","images//史風 鈴(pose).png")
-    copy_file_to_documents("ng//NG変換ワード.csv","ng//NG変換ワード//NG変換ワード.csv")
-    copy_file_to_documents("ng//禁止ワード.csv","ng//禁止ワード//禁止ワード.csv")
-    copy_file_to_documents("settings.ini","settings//settings.ini")
-    copy_file_to_documents("characters.ini","characters//characters.ini")
+    def get_app_dir():
+        # ドキュメントフォルダ内の 'testApp' ディレクトリを取得
+        return os.path.join(get_documents_dir(), 'testApp')
+
+    def ensure_app_dir():
+        # 'testApp' ディレクトリがなければ作成
+        app_dir = get_app_dir()
+        if not os.path.exists(app_dir):
+            os.makedirs(app_dir)
+        return app_dir
+
+    def copy_file_to_app_dir(filename):
+        # アプリ内のファイルをドキュメントフォルダにコピー
+        app_dir = ensure_app_dir()
+        dest_path = os.path.join(app_dir, filename)
+
+        # 既に存在する場合はコピーしない
+        if not os.path.exists(dest_path):
+            # アプリ内のファイルのパスを取得
+            if getattr(sys, 'frozen', False):
+                # パッケージ化された場合
+                base_path = os.path.dirname(os.path.abspath(sys.executable))
+            else:
+                # スクリプト実行の場合
+                base_path = os.path.dirname(os.path.abspath(__file__))
+
+            source_path = os.path.join(base_path, filename)
+
+            try:
+                shutil.copyfile(source_path, dest_path)
+                print(f"Copied {filename} to {dest_path}")
+            except Exception as e:
+                print(f"Error copying {filename}: {e}")
+        else:
+            print(f"{filename} already exists at {dest_path}, not overwriting.")
+
+    # 初回起動時のファイルコピー
+    copy_file_to_app_dir("settings.ini")
+    copy_file_to_app_dir("characters.ini")
+    copy_file_to_app_dir("data//ng//ng_expressions.csv")
+    copy_file_to_app_dir("data//ng//ng_words.csv")
+    copy_file_to_app_dir("assets")
 
     app = AIVtuberApp(page)
 
 if __name__ == "__main__":
-    multiprocessing.freeze_support()
     ft.app(target=main)
+

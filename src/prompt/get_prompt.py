@@ -1,20 +1,17 @@
 import configparser
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import os
 
 class GetPrompt:
-    def __init__(self,base_dir,selected_character_name=None):
+    def __init__(self, selected_character_name=None):
         config = configparser.ConfigParser()
-        characters_path = os.path.join(base_dir, 'characters', 'characters.ini')
-        config.read(characters_path, encoding='utf-8')
+        config.read("characters.ini", encoding='utf-8')
         characters = []
         for section in config.sections():
             characters.append({
                 "name": config[section].get("name", "テスト"),
                 "profile_prompt": '\n'.join(['\t' + line for line in config[section].get("profile_prompt", "").split('\n')]),
                 "situation_prompt": '\n'.join(['\t' + line for line in config[section].get("situation_prompt", "").split('\n')]),
-                "voice_prompt": config[section].get("voice_prompt", ""),
                 "format_prompt": config[section].get("format_prompt", ""),
                 "guideline_prompt": config[section].get("guideline_prompt", ""),
                 "exampletopic_prompt": config[section].get("exampletopic_prompt", ""),
@@ -140,9 +137,6 @@ class GetPrompt:
 応答は以下のガイドラインに従ってください：
 {self.selected_character["guideline_prompt"]}
 
-配信者の声のトーン指定は以下の形式に従ってください：
-{self.selected_character["voice_prompt"]}
-
 応答文は以下の形式に従ってください：
 {self.selected_character["format_prompt"]}
 
@@ -249,21 +243,18 @@ class GetPrompt:
 {topic_suggestions}
 </topic_suggestions>
 
-応答は以下のガイドラインに従ってください：
+台詞は以下のガイドラインに従ってください：
 {self.selected_character["guideline_prompt"]}
 
-配信者の声のトーン指定は以下の形式に従ってください：
-{self.selected_character["voice_prompt"]}
-
-応答文は以下の形式に従ってください：
+配信者の台詞は以下の形式に従ってください：
 {self.selected_character["format_prompt"]}
 
-応答文を生成している間、配信者のキャラクターと話し方を維持することを忘れないでください。プロフィールに記載されている人称代名詞、話し方の特徴、性格の特徴を使用してください。同じ話題を繰り返さず、「〇〇」という表現は使用せず、会話履歴、現在の状況、話題の提案を考慮して、文脈に適した魅力的で簡潔な台詞を提案します。"""
+台詞を生成している間、配信者のキャラクターと話し方を維持することを忘れないでください。プロフィールに記載されている人称代名詞、話し方の特徴、性格の特徴を使用してください。同じ話題を繰り返さず、「〇〇」という表現は使用せず、会話履歴、現在の状況、話題の提案を考慮して、文脈に適した魅力的で簡潔な台詞を提案します。"""
         return prompt
 
     def default_profile_prompt(self):
         default_profile_prompt = """<character_appearance>
-    たぬきのような見た目の女の子
+    明るいブラウンの髪の毛にフリフリの白と黒の上下の衣装を着ている。猫耳としっぽがある
 </character_appearance>
 <personal_pronouns>
     <first_person_singular>ぼく</first_person_singular>
@@ -272,8 +263,9 @@ class GetPrompt:
     <tone>明るく優しい口調</tone>
 </speech_characteristics>
 <character_description>
+    中性的な女の子。真面目な性格。
     普段は明るく、喜怒哀楽が豊か。
-    よく笑ったり、泣いたり、怒ったり、悲しんだりする。
+    よく笑ったり、泣いたり、怒ったり、悲しんだり、青ざめたり、かわいこぶって猫のポーズを取ったりする。
 </character_description>
 <viewer_relationship>
     普段からどの視聴者に対しても親しみを込めて接している。
@@ -282,24 +274,7 @@ class GetPrompt:
     def default_situation_prompt(self):
         default_situation_prompt = """<location>配信部屋</location>"""
         return default_situation_prompt
-
-    def default_voice_prompt(self):
-        default_voice_prompt = """<voice_tone_format>
-[<voice_tone>]
-
-声のトーンの種類：
-- ノーマル
-- あまあま
-- ツンツン
-- セクシー
-- ささやき
-- なみだめ
-
-例：[ノーマル]
-</voice_tone_format>
-"""
-        return default_voice_prompt
-
+    
     def default_format_prompt(self):
         default_format_prompt = """<response_format>
 [<emotion>]<会話文>
@@ -309,22 +284,19 @@ class GetPrompt:
 - happy: 喜び
 - angry: 怒り
 - sad: 悲しみ
-- fun: 楽しい
+- surprise: 驚き
+- blue: 青ざめている様子
+- pose: 猫の手のポーズをする様子
 
 文の最初に感情を示し、対応する文章を続けてください。
-例：[neutral]こんにちは。[happy]今日はいい天気ですね！[fun]楽しみだな～。[sad]あ、でも午後からは雨なのか。[angry]ううー新しい靴買ったのに！！
+例：[neutral]こんにちは。[happy]今日はいい天気ですね！[sad]でも午後からは雨。[surprise]すごい降るみたい！[blue]すぐに止むといいけど...[angry]新しい靴買ったのに！！[pose]なんてね。
 </response_format>
 
 配信者の応答を以下の形式で出力してください：
 <output>
-<voice_tone>
-[声のトーン]
-</voice_tone>
-<response>
 [感情]応答文
 [感情]応答文
 ...
-</response>
 </output>"""
         return default_format_prompt
 

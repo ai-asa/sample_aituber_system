@@ -2,13 +2,11 @@
 from websocket import create_connection, WebSocketException
 import configparser
 import json
-import os
 
 class VtubeStudioAdapter:
-    def __init__(self,base_dir,vts_allow_flag):
+    def __init__(self,vts_allow_flag):
         config = configparser.ConfigParser()
-        settings_path = os.path.join(base_dir, 'settings', 'settings.ini')
-        config.read(settings_path, encoding='utf-8')
+        config.read("settings.ini", encoding='utf-8')
         self.vts_ws_host = config.get('VTS', 'vts_ws_host',fallback="127.0.0.1")
         self.vts_ws_port = config.get('VTS', 'vts_ws_port',fallback="8001")
         self.pre_hotkeyId = None
@@ -147,11 +145,11 @@ class VtubeStudioAdapter:
         }
         return converted_data
 
-# if __name__ == "__main__":
-#     import multiprocessing
-#     vts_allow_flag = multiprocessing.Queue()
-#     vs = VtubeStudioAdapter(vts_allow_flag)
-#     print(vs.get_hotkey_list())
+if __name__ == "__main__":
+    import multiprocessing
+    vts_allow_flag = multiprocessing.Queue()
+    vs = VtubeStudioAdapter(vts_allow_flag)
+    print(vs.get_hotkey_list())
     # i = 1
     # for hotkeyId in ["23883dccdeb2425799738ec84114aef5", "e690e99696ff43d68539a387cd15d039", "e690e99696ff43d68539a387cd15d039", "91a1e2fe72bf4ef2810222d8dcde00cb", "23883dccdeb2425799738ec84114aef5"]:
     #     print("i = ",i)

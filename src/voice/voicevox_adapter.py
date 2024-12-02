@@ -7,7 +7,6 @@ import soundfile as sf
 class VoicevoxAdapter:
     def __init__(self, host="127.0.0.1", port=50021):
         self.base_url = f"http://{host}:{port}"
-        self.special_speaker = [2,3,10,11,12,13,16,20,23]
 
     def get_audio_query(self, text, speaker=1):
         # audio_queryの取得
@@ -28,135 +27,66 @@ class VoicevoxAdapter:
             with sf.SoundFile(f) as sound_file:
                 return sound_file.frames / sound_file.samplerate
 
-    def get_voice_data(self, change_tone, voice_tone: str, text: str, speaker=1):
-        if change_tone == "True":
-            if speaker in self.special_speaker:
-                speaker = self._fetch_speaker(speaker,voice_tone)
+    def get_voice_data(self, text: str, speaker=1):
         audio_query = self.get_audio_query(text, speaker)
         audio_bytes = self.get_synthesis(audio_query, speaker)
         audio_stream = io.BytesIO(audio_bytes)
         data, sample_rate = sf.read(audio_stream)
         return data, sample_rate
     
-    def fetch_voice_id(self):
-        r = requests.get(f"{self.base_url}/speakers")
-        if r.status_code == 200:
-            speakers = r.json()
-            dropdown_options = []
-            id_dict = {}
+    def get_voice_id(self,name):
+        id_data = {"四国めたん(ノーマル)":2,
+                   "四国めたん(あまあま)":0,
+                   "四国めたん(ツンツン)":6,
+                   "四国めたん(セクシー)":4,
+                   "四国めたん(ささやき)":36,
+                   "四国めたん(ヒソヒソ)":37,
+                   "ずんだもん(ノーマル)":3,
+                   "ずんだもん(あまあま)":1,
+                   "ずんだもん(ツンツン)":7,
+                   "ずんだもん(セクシー)":5,
+                   "ずんだもん(ささやき)":22,
+                   "ずんだもん(ひそひそ)":38,
+                   "春日部つむぎ(ノーマル)":8,
+                   "雨晴はう(ノーマル)":10,
+                   "波音リツ(ノーマル)":9,
+                   "玄野武宏(ノーマル)":11,
+                   "玄野武宏(喜び)":39,
+                   "玄野武宏(ツンギレ)":40,
+                   "玄野武宏(悲しみ)":41,
+                   "白上虎太郎(ふつう)":12,
+                   "白上虎太郎(わーい)":32,
+                   "白上虎太郎(びくびく)":33,
+                   "白上虎太郎(おこ)":34,
+                   "白上虎太郎(びえーん)":35,
+                   "青山龍星(ノーマル)":13,
+                   "冥鳴ひまり(ノーマル)":14,
+                   "九州そら(ノーマル)":16,
+                   "九州そら(あまあま)":15,
+                   "九州そら(ツンツン)":18,
+                   "九州そら(セクシー)":17,
+                   "九州そら(ささやき)":19,
+                   "もち子さん(ノーマル)":20,
+                   "剣崎雌雄(ノーマル)":21,
+                   "WhiteCUL(ノーマル)":23,
+                   "WhiteCUL(たのしい)":24,
+                   "WhiteCUL(かなしい)":25,
+                   "WhiteCUL(びえーん)":26,
+                   "後鬼(人間ver.)":27,
+                   "後鬼(ぬいぐるみver.)":28,
+                   "No.7(ノーマル)":29,
+                   "No.7(アナウンス)":30,
+                   "No.7(読み聞かせ)":31,
+                   "ちび式じい(ノーマル)":42,
+                   "櫻歌ミコ(ノーマル)":43,
+                   "櫻歌ミコ(第二形態)":44,
+                   "櫻歌ミコ(ロリ)":45,
+                   "小夜/SAYO(ノーマル)":46,
+                   "ナースロボ＿タイプT(ノーマル)":47,
+                   "ナースロボ＿タイプT(楽々)":48,
+                   "ナースロボ＿タイプT(恐怖)":49,
+                   "ナースロボ＿タイプT(内緒話)":50}
+        return id_data[name]
 
-            for speaker in speakers:
-                for style in speaker['styles']:
-                    option = f"{speaker['name']}({style['name']})"
-                    dropdown_options.append(option)
-                    id_dict[option] = style['id']
-            return dropdown_options, id_dict
-        else:
-            print("Failed to retrieve speakers")
-            return [], {}
-
-    def _fetch_speaker(self,speaker,voice_tone):
-        if speaker == 2:
-            if voice_tone == "[あまあま]":
-               return 0
-            elif voice_tone == "[ツンツン]":
-               return 6
-            elif voice_tone == "[セクシー]":
-                return 4
-            elif voice_tone == "[ささやき]":
-                return 36
-            else:
-                return speaker
-        elif speaker == 3:
-            if voice_tone == "[あまあま]":
-               return 1
-            elif voice_tone == "[ツンツン]":
-               return 7
-            elif voice_tone == "[セクシー]":
-                return 5
-            elif voice_tone == "[ささやき]":
-                return 22
-            elif voice_tone == "[ヘロヘロ]":
-                return 75
-            elif voice_tone == "[なみだめ]":
-                return 76
-            else:
-                return speaker
-        elif speaker == 11:
-            if voice_tone == "[喜び]":
-               return 39
-            elif voice_tone == "[ツンギレ]":
-               return 40
-            elif voice_tone == "[悲しみ]":
-                return 41
-            else:
-                return speaker
-        elif speaker == 12:
-            if voice_tone == "[わーい]":
-               return 32
-            elif voice_tone == "[びくびく]":
-               return 33
-            elif voice_tone == "[おこ]":
-                return 34
-            elif voice_tone == "[びえーん]":
-                return 35
-            else:
-                return speaker
-        elif speaker == 13:
-            if voice_tone == "[熱血]":
-               return 81
-            elif voice_tone == "[不機嫌]":
-               return 82
-            elif voice_tone == "[喜び]":
-                return 83
-            elif voice_tone == "[しっとり]":
-                return 84
-            elif voice_tone == "[かなしみ]":
-                return 85
-            elif voice_tone == "[囁き]":
-                return 86
-            else:
-                return speaker
-        elif speaker == 16:
-            if voice_tone == "[あまあま]":
-               return 15
-            elif voice_tone == "[ツンツン]":
-               return 18
-            elif voice_tone == "[セクシー]":
-                return 17
-            elif voice_tone == "[ささやき]":
-                return 19
-            else:
-                return speaker
-        elif speaker == 20:
-            if voice_tone == "[セクシー／あん子]":
-                return 66
-            elif voice_tone == "[泣き]":
-                return 77
-            elif voice_tone == "[怒り]":
-                return 78
-            elif voice_tone == "[喜び]":
-                return 79
-            elif voice_tone == "[のんびり]":
-                return 80
-            else:
-                return speaker
-        elif speaker == 23:
-            if voice_tone == "[たのしい]":
-                return 24
-            elif voice_tone == "[かなしい]":
-                return 25
-            elif voice_tone == "[びえーん]":
-                return 26
-            else:
-                return speaker
-
-if __name__ == "__main__":
-    try:
-        va = VoicevoxAdapter()
-        _, id_dict = va.fetch_voice_id()
-        print(id_dict)
-    except Exception as e:
-        print(f"An error occurred: {e}")
 
 # %%

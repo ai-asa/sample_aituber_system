@@ -5,15 +5,17 @@ import logging
 from src.prompt.get_prompt import GetPrompt
 
 class CharacterManager:
-    def __init__(self,base_dir):
+    def __init__(self):
         """
         character_pageの各デフォルト値を定義。load_charactersでcharactersの辞書データを取得。
         """
-        self.base_dir = base_dir
-        self.gp = GetPrompt(base_dir)
+        self.gp = GetPrompt()
+        # assetsディレクトリが存在しない場合は作成
+        if not os.path.exists("assets"):
+            os.makedirs("assets")
+            logging.debug("asssetsディレクトリが存在しないため作成")
         self.config = configparser.ConfigParser()
-        images_path = os.path.join(base_dir, 'images')
-        self.DEFAULT_IMAGE = os.path.join(images_path, "default_character.png")
+        self.DEFAULT_IMAGE = os.path.join("assets", "default_character.png")
         self.DEFAULT_FAMILY_NAME = "サンプル"
         self.DEFAULT_LAST_NAME = "キャラクター"
         self.DEFAULT_FAMILY_KANA_NAME = "さんぷる"
@@ -23,18 +25,18 @@ class CharacterManager:
         self.DEFAULT_SITUATION_PROMPT = self.gp.default_situation_prompt()
         self.DEFAULT_FORMAT_PROMPT = self.gp.default_format_prompt()
         self.DEFAULT_GUIDELINE_PROMPT = self.gp.default_guideline_prompt()
-        self.DEFAULT_VOICE_PROMPT = self.gp.default_voice_prompt()
         self.DEFAULT_EXAMPLETOPIC_PROMPT = self.gp.default_exampleTopic_prompt()
         self.DEFAULT_THINKTOPIC_PROMPT = self.gp.default_thinkTopic_prompt()
         self.DEFAULT_PROMPT = "default"
         self.DEFAULT_VOICE_SERVICE = "VOICEVOX"
         self.DEFAULT_VOICE = "1"
-        self.DEFAULT_CHANGE_TONE = "False"
         self.DEFAULT_WAIT = "20"
+        self.DEFAULT_POSE = ""
         self.DEFAULT_HAPPY = ""
         self.DEFAULT_SAD = ""
-        self.DEFAULT_FUN = ""
+        self.DEFAULT_SURPRISE = ""
         self.DEFAULT_ANGRY = ""
+        self.DEFAULT_BLUE = ""
         self.DEFAULT_NEUTRAL = ""
         self.characters = self.load_characters()
 
@@ -50,8 +52,8 @@ class CharacterManager:
             str: コピー先の新しいファイルパス
         
         """
-        images_path = os.path.join(self.base_dir, 'images')
-        new_file_path = os.path.join(images_path, file_name)
+        assets_dir = "assets"
+        new_file_path = os.path.join(assets_dir, file_name)
         shutil.copy2(source_path, new_file_path)
         return new_file_path
 
@@ -65,9 +67,8 @@ class CharacterManager:
 
         """
         logging.debug("characters.iniファイルからキャラクターデータを読み込み")
-        scharacters_path = os.path.join(self.base_dir, 'characters', 'characters.ini')
-        if os.path.exists(scharacters_path):
-            self.config.read(scharacters_path, encoding='utf-8')
+        if os.path.exists("characters.ini"):
+            self.config.read("characters.ini", encoding='utf-8')
             characters = []
             for section in self.config.sections():
                 characters.append({
@@ -81,17 +82,17 @@ class CharacterManager:
                     "situation_prompt": self.config[section].get("situation_prompt", self.DEFAULT_SITUATION_PROMPT),
                     "format_prompt": self.config[section].get("format_prompt", self.DEFAULT_FORMAT_PROMPT),
                     "guideline_prompt": self.config[section].get("guideline_prompt", self.DEFAULT_GUIDELINE_PROMPT),
-                    "voice_prompt": self.config[section].get("voice_prompt", self.DEFAULT_VOICE_PROMPT),
                     "exampleTopic_prompt": self.config[section].get("exampleTopic_prompt", self.DEFAULT_EXAMPLETOPIC_PROMPT),
                     "thinkTopic_prompt": self.config[section].get("thinkTopic_prompt", self.DEFAULT_THINKTOPIC_PROMPT),
                     "voice_service": self.config[section].get("voice_service", self.DEFAULT_VOICE_SERVICE),
                     "voice": self.config[section].get("voice", self.DEFAULT_VOICE),
-                    "change_tone" : self.config[section].get("change_tone", self.DEFAULT_CHANGE_TONE),
                     "wait": self.config[section].get("wait", self.DEFAULT_WAIT),
+                    "pose": self.config[section].get("pose", self.DEFAULT_POSE),
                     "happy": self.config[section].get("happy", self.DEFAULT_HAPPY),
                     "sad": self.config[section].get("sad", self.DEFAULT_SAD),
-                    "fun": self.config[section].get("fun", self.DEFAULT_FUN),
+                    "surprise": self.config[section].get("surprise", self.DEFAULT_SURPRISE),
                     "angry": self.config[section].get("angry", self.DEFAULT_ANGRY),
+                    "blue": self.config[section].get("blue", self.DEFAULT_BLUE),
                     "neutral": self.config[section].get("neutral", self.DEFAULT_NEUTRAL),
                 })
             logging.debug(f"{len(characters)}個のキャラクターを読み込みました")
@@ -108,17 +109,17 @@ class CharacterManager:
             "situation_prompt": self.DEFAULT_SITUATION_PROMPT,
             "format_prompt": self.DEFAULT_FORMAT_PROMPT,
             "guideline_prompt": self.DEFAULT_GUIDELINE_PROMPT,
-            "voice_prompt" : self.DEFAULT_VOICE_PROMPT,
             "exampleTopic_prompt": self.DEFAULT_EXAMPLETOPIC_PROMPT,
             "thinkTopic_prompt": self.DEFAULT_THINKTOPIC_PROMPT,
             "voice_service": self.DEFAULT_VOICE_SERVICE,
             "voice": self.DEFAULT_VOICE,
-            "change_tone" : self.DEFAULT_CHANGE_TONE,
             "wait": self.DEFAULT_WAIT,
+            "pose": self.DEFAULT_POSE,
             "happy": self.DEFAULT_HAPPY,
             "sad": self.DEFAULT_SAD,
-            "fun": self.DEFAULT_FUN,
+            "surprise": self.DEFAULT_SURPRISE,
             "angry": self.DEFAULT_ANGRY,
+            "blue": self.DEFAULT_BLUE,
             "neutral": self.DEFAULT_NEUTRAL,
         }]
 
@@ -146,22 +147,20 @@ class CharacterManager:
                 "situation_prompt": char.get("situation_prompt", ""),
                 "format_prompt": char.get("format_prompt", ""),
                 "guideline_prompt": char.get("guideline_prompt", ""),
-                "voice_prompt": char.get("voice_prompt", ""),
                 "exampleTopic_prompt": char.get("exampleTopic_prompt", ""),
                 "thinkTopic_prompt": char.get("thinkTopic_prompt", ""),
                 "voice_service": char.get("voice_service", ""),
                 "voice": char.get("voice", ""),
-                "change_tone": char.get("change_tone", ""),
                 "wait": char.get("wait", ""),
+                "pose": char.get("pose", ""),
                 "happy": char.get("happy", ""),
                 "sad": char.get("sad", ""),
-                "fun": char.get("fun", ""),
+                "surprise": char.get("surprise", ""),
                 "angry": char.get("angry", ""),
+                "blue": char.get("blue", ""),
                 "neutral": char.get("neutral", ""),
             }
-        # 書き出し
-        characters_path = os.path.join(self.base_dir, 'characters', 'characters.ini')
-        with open(characters_path, "w", encoding='utf-8') as f:
+        with open("characters.ini", "w", encoding='utf-8') as f:
             self.config.write(f)
         logging.debug("キャラクターをファイルに保存しました")
 

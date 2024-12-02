@@ -1,14 +1,12 @@
 # %%
 import obsws_python as obs
 import configparser
-import os
 
 class OBSAdapter:
     
-    def __init__(self,base_dir) -> None:
+    def __init__(self) -> None:
         config = configparser.ConfigParser()
-        settings_path = os.path.join(base_dir, 'settings', 'settings.ini')
-        config.read(settings_path, encoding='utf-8')
+        config.read("settings.ini", encoding='utf-8')
         self.host = config.get('OBS', 'obs_ws_host',fallback="")
         self.port = config.get('OBS', 'obs_ws_port',fallback="")
         self.password = config.get('OBS', 'obs_ws_password',fallback="")
@@ -29,11 +27,11 @@ class OBSAdapter:
     def set_subtitle_listener(self, text:str):
         self.ws.set_input_settings(name=self.listener, settings={"text":text},overlay=True)
 
-# if __name__=='__main__':
-#     obsAdapter = OBSAdapter()
-#     import random
-#     text = "Questionの番号は" + str(random.randint(0,100))
-#     obsAdapter.set_subtitle_question(text)
+if __name__=='__main__':
+    obsAdapter = OBSAdapter()
+    import random
+    text = "Questionの番号は" + str(random.randint(0,100))
+    obsAdapter.set_subtitle_question(text)
             
 
 # %%
